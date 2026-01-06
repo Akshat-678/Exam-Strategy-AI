@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Exam Strategy AI</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body { font-family: 'Inter', system-ui, sans-serif; max-width: 1000px; margin: 40px auto; padding: 20px; background-color: #f9fafb; color: #1f2937; }
+        .card { background: white; padding: 32px; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); }
+        textarea { width: 100%; height: 160px; padding: 16px; border: 1px solid #d1d5db; border-radius: 8px; margin-bottom: 16px; font-size: 15px; }
+        button { background: #2563eb; color: white; border: none; padding: 12px 24px; border-radius: 6px; cursor: pointer; font-weight: 600; width: 100%; }
+        button:hover { background: #1d4ed8; }
+        
+        #results { margin-top: 32px; display: none; }
+        .dashboard-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-top: 24px; }
+        
+        .tips-section { background: #eff6ff; padding: 20px; border-left: 4px solid #2563eb; border-radius: 4px; margin-top: 24px; }
+        .tips-section h3 { margin-top: 0; color: #1e40af; }
+        .tips-list { padding-left: 20px; line-height: 1.8; }
+        
+        table { width: 100%; border-collapse: collapse; background: white; border-radius: 8px; overflow: hidden; }
+        th, td { padding: 12px; text-align: left; border-bottom: 1px solid #f3f4f6; }
+        th { background: #f9fafb; font-size: 12px; text-transform: uppercase; color: #6b7280; }
+        
+        .score-pill { display: inline-block; padding: 4px 12px; background: #dcfce7; color: #166534; border-radius: 999px; font-weight: bold; }
+        #loading { display: none; text-align: center; color: #6b7280; margin: 20px 0; }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h1>Exam Analysis & Writing Help</h1>
+        <p>Paste your paper to see weightage-based writing strategies.</p>
+        
+        <textarea id="paperInput" placeholder="Paste questions here..."></textarea>
+        <button onclick="runAnalysis()">Analyze Paper & Get Tips</button>
+        <div id="loading">Analyzing with Gemini 2.5 Flash...</div>
+
+        <div id="results">
+            <h3>Difficulty Index: <span class="score-pill" id="diffScore">0</span></h3>
+            
+            <div class="dashboard-grid">
+                <div>
+                    <canvas id="chartArea"></canvas>
+                </div>
+                <div>
+                    <table id="dataTable">
+                        <thead><tr><th>Topic</th><th>Weightage</th></tr></thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="tips-section">
+                <h3>Smart Writing Strategy</h3>
+                <ul class="tips-list" id="tipsContainer"></ul>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let chartInstance = null;
+
+        async function runAnalysis() {
+            const text = document.getElementById('paperInput').value;
+            if(!text) return alert("Please enter text");
+
+            document.getElementById('loading').style.display = "block";
+            document.getElementById('results').style.display = "none";
+
+            try {
+                const res = await fetch('/analyze', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ text })
+                });
+                const data = await res.json();
+                displayData(data);
+            } catch (err) {
+                alert("Error connecting to server.");
+            } finally {
+                document.getElementById('loading').style.display = "none";
+            }
+        }
+
+        function displayData(data) {
+            document.getElementById('results').style.display = "block";
+            document.getElementById('diffScore').innerText = data.difficulty_score + "/100";
+
+            // Populate Table
+            const tbody = document.querySelector("#dataTable tbody");
+            tbody.innerHTML = Object.entries(data.topics)
+                .map(([name, val]) => `<tr><td>${name}</td><td><strong>${val}%</strong></td></tr>`).join('');
+
+            // Populate Tips
+            const tipsContainer = document.getElementById('tipsContainer');
+            tipsContainer.innerHTML = data.writing_tips.map(tip => `<li>${tip}</li>`).join('');
+
+            // Render Chart
+            const ctx = document.getElementById('chartArea').getContext('2d');
+            if(chartInstance) chartInstance.destroy();
+            chartInstance = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: Object.keys(data.topics),
+                    datasets: [{
+                        data: Object.values(data.topics),
+                        backgroundColor: ['#2563eb', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6']
+                    }]
+                },
+                options: { plugins: { legend: { position: 'bottom' } } }
+            });
+        }
+    </script>
+</body>
+</html>
