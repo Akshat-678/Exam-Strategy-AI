@@ -11,7 +11,7 @@ An AI-powered web application that analyzes exam question papers to extract:
 ##  Live MVP Demo
 
  **Live URL:**  
-https://unhabitably-phyllogenetic-hendrix.ngrok-free.dev
+https://exam-strategy-ai.onrender.com
 
  Note: This is an MVP demo link exposed via tunneling for hackathon evaluation.
 
